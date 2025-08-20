@@ -1,30 +1,53 @@
 package com.project.back_end.mvc;
 
+
+import com.project.back_end.services.Service;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@Controller
 public class DashboardController {
 
-// 1. Set Up the MVC Controller Class:
-//    - Annotate the class with `@Controller` to indicate that it serves as an MVC controller returning view names (not JSON).
-//    - This class handles routing to admin and doctor dashboard pages based on token validation.
+    private final Service sharedService; // common service with validateToken(...)
 
+    public DashboardController(Service sharedService) {
+        this.sharedService = sharedService;
+    }
 
-// 2. Autowire the Shared Service:
-//    - Inject the common `Service` class, which provides the token validation logic used to authorize access to dashboards.
+    // Allow dots in JWT path var with :.+ regex
+    @GetMapping("/adminDashboard/{token:.+}")
+    public String adminDashboard(@PathVariable String token, Model model) {
+        ResponseEntity<Map<String, Object>> resp = sharedService.validateToken(token, "admin");
+        Map<String, Object> body = resp.getBody();
+        boolean valid = resp.getStatusCode().is2xxSuccessful()
+                        && body != null
+                        && Boolean.TRUE.equals(body.get("valid"));
 
+        if (valid) {
+            model.addAttribute("subject", body.get("subject"));
+            return "admin/adminDashboard";
+        }
+        return "redirect:/";
+    }
 
-// 3. Define the `adminDashboard` Method:
-//    - Handles HTTP GET requests to `/adminDashboard/{token}`.
-//    - Accepts an admin's token as a path variable.
-//    - Validates the token using the shared service for the `"admin"` role.
-//    - If the token is valid (i.e., no errors returned), forwards the user to the `"admin/adminDashboard"` view.
-//    - If invalid, redirects to the root URL, likely the login or home page.
+    @GetMapping("/doctorDashboard/{token:.+}")
+    public String doctorDashboard(@PathVariable String token, Model model) {
+        ResponseEntity<Map<String, Object>> resp = sharedService.validateToken(token, "doctor");
+        Map<String, Object> body = resp.getBody();
+        boolean valid = resp.getStatusCode().is2xxSuccessful()
+                        && body != null
+                        && Boolean.TRUE.equals(body.get("valid"));
 
-
-// 4. Define the `doctorDashboard` Method:
-//    - Handles HTTP GET requests to `/doctorDashboard/{token}`.
-//    - Accepts a doctor's token as a path variable.
-//    - Validates the token using the shared service for the `"doctor"` role.
-//    - If the token is valid, forwards the user to the `"doctor/doctorDashboard"` view.
-//    - If the token is invalid, redirects to the root URL.
-
-
+        if (valid) {
+            model.addAttribute("subject", body.get("subject"));
+            return "doctor/doctorDashboard";
+        }
+        return "redirect:/";
+    }
 }
+
